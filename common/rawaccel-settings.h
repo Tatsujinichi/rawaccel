@@ -18,8 +18,8 @@ namespace rawaccel {
     };
 
     struct accel_args {
-        double motivity = 1;
-        double synchronous_speed = 1;
+        double motivity = 2;
+        double synchronous_speed = 10;
         double gamma = 1;
         double hard_cap = 0;
     };

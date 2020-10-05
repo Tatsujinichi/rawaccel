@@ -98,7 +98,7 @@ namespace rawaccel {
         } gain_u = {};
         
         struct cache_t {
-            double M = 0;
+            double M = 1;
             double A = 0;
             double C = 0;
             double G = 0;
@@ -107,14 +107,14 @@ namespace rawaccel {
         accel_scale_clamp clamp;
 
         accelerator(const accel_args& args) : clamp(args.hard_cap) {  
-            if (args.gamma == 0 || args.motivity < 1 || args.synchronous_speed <= 0) {
+            if (args.gamma == 0 || args.motivity <= 1 || args.synchronous_speed <= 0) {
                 return;
             }
 
             cache.M = args.motivity;
             cache.A = log(args.synchronous_speed);
             cache.C = log(args.motivity);
-            cache.G = args.gamma / log(args.motivity);
+            cache.G = args.gamma / cache.C;
         }
 
         accelerator(const accel_args& args, gain::mode mode) : accelerator(args) {
@@ -129,7 +129,7 @@ namespace rawaccel {
 
         template <typename Func>
         inline double accel_impl(double speed, Func fn) const {
-            if (cache.M < 1) 
+            if (cache.M <= 1) 
                 return cache.M;
 
             auto transferred = cache.G * (log(speed) - cache.A);

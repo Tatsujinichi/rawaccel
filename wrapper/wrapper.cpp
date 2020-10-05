@@ -133,8 +133,8 @@ error_list_t^ get_accel_errors(GainMode mode, AccelArgs^ args)
     
     if (args->gamma == 0)
         error_list->Add("gamma can not be 0");
-    if (args->motivity < 1)
-        error_list->Add("motivity can not be less than 1");
+    if (args->motivity <= 1)
+        error_list->Add("motivity must be greater than 1");
     if (args->synchronousSpeed <= 0) {
         error_list->Add("synchronous speed must be positive");
     }
