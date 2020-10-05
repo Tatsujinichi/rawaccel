@@ -14,14 +14,12 @@
 
 namespace ra = rawaccel;
 
-using milliseconds = double;
-using lut_value_t = ra::si_pair;
+using ra::milliseconds;
 
 struct {
     ra::settings args;
     milliseconds tick_interval = 0; // set in DriverEntry
     ra::mouse_modifier modifier;
-    vec2<lut_value_t*> lookups = {};
 } global;
 
 VOID
@@ -179,7 +177,7 @@ Return Value:
         }
 
         global.args = new_settings;
-        global.modifier = { global.args, global.lookups };
+        global.modifier = { global.args };
 
         WdfRequestComplete(Request, STATUS_SUCCESS);
     }
@@ -260,7 +258,7 @@ Routine Description:
         LARGE_INTEGER freq;
         KeQueryPerformanceCounter(&freq);
         global.tick_interval = 1e3 / freq.QuadPart;
-
+        /*
         auto make_lut = [] {
             const size_t POOL_SIZE = sizeof(lut_value_t) * ra::LUT_SIZE;
 
@@ -277,7 +275,7 @@ Routine Description:
         };
 
         global.lookups = { make_lut(), make_lut() };
-
+        */
         CreateControlDevice(driver);
     }
     else {
