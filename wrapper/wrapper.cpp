@@ -12,27 +12,20 @@ using namespace System::Runtime::InteropServices;
 using namespace Newtonsoft::Json;
 
 [JsonConverter(Converters::StringEnumConverter::typeid)]
-public enum class AccelMode
+public enum class GainMode
 {
-    linear, classic, natural, naturalgain, power, motivity, noaccel
+    tanh, gd, erf, clamp, softplus
 };
 
 [JsonObject(ItemRequired = Required::Always)]
 [StructLayout(LayoutKind::Sequential)]
 public value struct AccelArgs
 {
-    double offset;
-    [MarshalAs(UnmanagedType::U1)]
-    bool legacyOffset;
-    double acceleration;
-    double scale;
-    double limit;
-    double exponent;
-    double midpoint;
-    double weight;
+    double motivity;
+    double synchronousSpeed;
+    double gamma;
     [JsonProperty("legacyCap")]
     double scaleCap;
-    double gainCap;
 };
 
 generic <typename T>
@@ -53,12 +46,15 @@ public ref struct DriverSettings
     [JsonProperty("Degrees of rotation")]
     double rotation;
 
+    [MarshalAs(UnmanagedType::U1)]
+    bool applyAccel;
+
     [JsonProperty("Use x as whole/combined accel")]
     [MarshalAs(UnmanagedType::U1)]
     bool combineMagnitudes;
 
-    [JsonProperty("Accel modes")]
-    Vec2<AccelMode> modes;
+    [JsonProperty("Gain function modes")]
+    Vec2<GainMode> modes;
 
     [JsonProperty("Accel parameters")]
     Vec2<AccelArgs> args;
@@ -116,48 +112,32 @@ DriverSettings^ get_active()
     return managed;
 }
 
-void update_modifier(mouse_modifier& mod, DriverSettings^ managed, vec2<si_pair*> luts = {})
+void update_modifier(mouse_modifier& mod, DriverSettings^ managed)
 {
     as_native(managed, [&](const settings& args) {
-        mod = { args, luts };
+        mod = { args };
     });
 }
 
 using error_list_t = Collections::Generic::List<String^>;
 
-error_list_t^ get_accel_errors(AccelMode mode, AccelArgs^ args)
+error_list_t^ get_accel_errors(GainMode mode, AccelArgs^ args)
 {
-    accel_mode m = (accel_mode)mode;
+    gain::mode m = (gain::mode)mode;
 
     auto is_mode = [m](auto... modes) { return ((m == modes) || ...); };
     
-    using am = accel_mode;
+    using gm = gain::mode;
 
     auto error_list = gcnew error_list_t();
     
-    if (args->acceleration > 10 && is_mode(am::natural, am::naturalgain))
-        error_list->Add("acceleration can not be greater than 10");
-    else if (args->acceleration == 0 && is_mode(am::naturalgain))
-        error_list->Add("acceleration must be positive");
-    else if (args->acceleration < 0) {
-        bool additive = m < am::power;
-        if (additive) error_list->Add("acceleration can not be negative, use a negative weight to compensate");
-        else error_list->Add("acceleration can not be negative");
+    if (args->gamma == 0)
+        error_list->Add("gamma can not be 0");
+    if (args->motivity < 1)
+        error_list->Add("motivity can not be less than 1");
+    if (args->synchronousSpeed <= 0) {
+        error_list->Add("synchronous speed must be positive");
     }
-        
-    if (args->scale <= 0)
-        error_list->Add("scale must be positive");
-
-    if (args->exponent <= 1 && is_mode(am::classic))
-        error_list->Add("exponent must be greater than 1");
-    else if (args->exponent <= 0)
-        error_list->Add("exponent must be positive");
-
-    if (args->limit <= 1)
-        error_list->Add("limit must be greater than 1");
-
-    if (args->midpoint <= 0)
-        error_list->Add("midpoint must be positive");
 
     return error_list;
 }
@@ -206,7 +186,7 @@ public ref struct DriverInterop
         return errors;
     }
 
-    static error_list_t^ GetAccelErrors(AccelMode mode, AccelArgs^ args)
+    static error_list_t^ GetAccelErrors(GainMode mode, AccelArgs^ args)
     {
         return get_accel_errors(mode, args);
     }
@@ -215,28 +195,17 @@ public ref struct DriverInterop
 public ref class ManagedAccel
 {
     mouse_modifier* const modifier_instance = new mouse_modifier();
-#ifdef RA_LOOKUP
-    si_pair* const lut_x = new si_pair[LUT_SIZE];
-    si_pair* const lut_y = new si_pair[LUT_SIZE];
-#else
-    si_pair* lut_x = nullptr;
-    si_pair* lut_y = nullptr;
-#endif
 
 public:
 
     virtual ~ManagedAccel()
     {
         delete modifier_instance;
-        delete[] lut_x;
-        delete[] lut_y;
     }
 
     !ManagedAccel()
     {
         delete modifier_instance;
-        delete[] lut_x;
-        delete[] lut_y;
     }
 
     Tuple<double, double>^ Accelerate(int x, int y, double time)
@@ -254,8 +223,7 @@ public:
     {
         update_modifier(
             *modifier_instance, 
-            args, 
-            vec2<si_pair*>{ lut_x, lut_y }
+            args
         );
     }
 
@@ -267,7 +235,6 @@ public:
         auto active = gcnew ManagedAccel();
         *active->modifier_instance = { 
             args
-            , vec2<si_pair*> { active->lut_x, active->lut_y }
         };
         return active;
     }
