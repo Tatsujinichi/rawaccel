@@ -6,14 +6,6 @@
 #include "rawaccel-settings.h"
 #include "x64-util.hpp"
 
-#include "accel-linear.hpp"
-#include "accel-classic.hpp"
-#include "accel-natural.hpp"
-#include "accel-naturalgain.hpp"
-#include "accel-power.hpp"
-#include "accel-motivity.hpp"
-#include "accel-noaccel.hpp"
-
 namespace rawaccel {
 
     /// <summary> Struct to hold vector rotation details. </summary>
@@ -72,142 +64,91 @@ namespace rawaccel {
 
         accel_scale_clamp() = default;
     };
-    
-    template <typename Visitor, typename Variant>
-    inline auto visit_accel(Visitor vis, Variant&& var) {
-        switch (var.tag) {
-        case accel_mode::linear:      return vis(var.u.linear);
-        case accel_mode::classic:     return vis(var.u.classic);
-        case accel_mode::natural:     return vis(var.u.natural);
-        case accel_mode::naturalgain: return vis(var.u.naturalgain);
-        case accel_mode::power:       return vis(var.u.power);
-        case accel_mode::motivity:    return vis(var.u.motivity);
-        default:                      return vis(var.u.noaccel);
-        }
-    }
 
-    struct accel_variant {
-        si_pair* lookup;
-
-        accel_mode tag = accel_mode::noaccel;
-
-        union union_t {
-            accel_linear linear;
-            accel_classic classic;
-            accel_natural natural;
-            accel_naturalgain naturalgain;
-            accel_power power;
-            accel_motivity motivity;
-            accel_noaccel noaccel = {};
-        } u = {};
-
-        accel_variant(const accel_args& args, accel_mode mode, si_pair* lut = nullptr) :
-            tag(mode), lookup(lut)
-        {
-            visit_accel([&](auto& impl) {
-                impl = { args }; 
-            }, *this);
-
-            if (lookup && tag == accel_mode::motivity) {
-                u.motivity.fn.fill(lookup);
-            }
-
+    struct gain::implementations {
+        static inline double tanh(double x) {
+            return ::tanh(x);
         }
 
-        inline double apply(double speed) const {
-            if (lookup && tag == accel_mode::motivity) {
-                return u.motivity.fn.apply(lookup, speed);
-            }
-
-            return visit_accel([=](auto&& impl) {
-                return impl(speed);
-            }, *this);
+        static inline double gd(double x) { 
+            return M_2_PI * atan(sinh(x * M_PI_2));
         }
-
-        accel_variant() = default;
     };
 
-    /// <summary> Struct to hold information about applying a gain cap. </summary>
-    struct velocity_gain_cap {
 
-        // <summary> The minimum speed past which gain cap is applied. </summary>
-        double threshold = 0;
+    struct gain::function {
+        mode tag = {};
 
-        // <summary> The gain at the point of cap </summary>
-        double slope = 0;
+        inline double operator()(double x) const {
+            using impls = implementations;
 
-        // <summary> The intercept for the line with above slope to give continuous velocity function </summary>
-        double intercept = 0;
-
-        /// <summary>
-        /// Initializes a velocity gain cap for a certain speed threshold
-        /// by estimating the slope at the threshold and creating a line
-        /// with that slope for output velocity calculations.
-        /// </summary>
-        /// <param name="speed"> The speed at which velocity gain cap will kick in </param>
-        /// <param name="accel"> The accel implementation used in the containing accel_variant </param>
-        velocity_gain_cap(double speed, const accel_variant& accel)
-        {
-            if (speed <= 0) return;
-
-            // Estimate gain at cap point by taking line between two input vs output velocity points.
-            // First input velocity point is at cap; for second pick a velocity a tiny bit larger.
-            double speed_second = 1.001 * speed;
-            double speed_diff = speed_second - speed;
-
-            // Return if by glitch or strange values the difference in points is 0.
-            if (speed_diff == 0) return;
-
-            // Find the corresponding output velocities for the two points.
-            double out_first = accel.apply(speed) * speed;
-            double out_second = accel.apply(speed_second) * speed_second;
-
-            // Calculate slope and intercept from two points.
-            slope = (out_second - out_first) / speed_diff;
-            intercept = out_first - slope * speed;
-
-            threshold = speed;
+            switch (tag) {
+            case mode::tanh: return impls::tanh(x);
+            case mode::gd:   return impls::gd(x);
+            default:         return 1;
+            }
         }
-
-        /// <summary>
-        /// Applies velocity gain cap to speed.
-        /// Returns scale value by which to multiply input to place on gain cap line.
-        /// </summary>
-        /// <param name="speed"> Speed to be capped </param>
-        /// <returns> Scale multiplier for input </returns>
-        inline double apply(double speed) const {
-			return  slope + intercept / speed;
-        }
-
-        /// <summary>
-        /// Whether gain cap should be applied to given speed.
-        /// </summary>
-        /// <param name="speed"> Speed to check against threshold. </param>
-        /// <returns> Whether gain cap should be applied. </returns>
-        inline bool should_apply(double speed) const {
-            return threshold > 0 && speed > threshold;
-        }
-
-        velocity_gain_cap() = default;
     };
 
     struct accelerator {
-        accel_variant accel;
-        velocity_gain_cap gain_cap;
+
+        union gain_union_t {
+            gain::function fn = {};
+            gain::lookup_value_t* lut;
+        } gain_u = {};
+        
+        struct cache_t {
+            double M = 0;
+            double A = 0;
+            double C = 0;
+            double G = 0;
+        } cache;
+
         accel_scale_clamp clamp;
 
-        accelerator(const accel_args& args, accel_mode mode, si_pair* lut = nullptr) :
-            accel(args, mode, lut), gain_cap(args.gain_cap, accel), clamp(args.scale_cap)
-        {}
-
-        inline double apply(double speed) const {
-            if (gain_cap.should_apply(speed)) {
-                return clamp(gain_cap.apply(speed));
+        accelerator(const accel_args& args) : clamp(args.hard_cap) {  
+            if (args.gamma == 0 || args.motivity < 1 || args.synchronous_speed <= 0) {
+                return;
             }
-            else return clamp(accel.apply(speed));
+
+            cache.M = args.motivity;
+            cache.A = log(args.synchronous_speed);
+            cache.C = log(args.motivity);
+            cache.G = args.gamma / log(args.motivity);
+        }
+
+        accelerator(const accel_args& args, gain::mode mode) : accelerator(args) {
+            gain_u.fn.tag = mode;
+        }
+
+        accelerator(const accel_args& args, gain::lookup_value_t* lut) : accelerator(args) {
+            gain_u.lut = lut;
         }
 
         accelerator() = default;
+
+        template <typename Func>
+        inline double accel_impl(double speed, Func fn) const {
+            if (cache.M < 1) 
+                return cache.M;
+
+            auto transferred = cache.G * (log(speed) - cache.A);
+            return clamp(exp(fn(transferred) * cache.C));
+        }
+
+        inline double apply(double speed) const {
+            return accel_impl(speed, [this](double x) {
+                return gain_u.fn(x);
+            });
+        }
+
+        inline double apply_lookup(double speed) const {
+            return accel_impl(speed, [this](double x) {
+                // TODO
+                return 1; 
+            });
+        }
+
     };
 
     /// <summary> Struct to hold variables and methods for modifying mouse input </summary>
@@ -219,9 +160,14 @@ namespace rawaccel {
         vec2<accelerator> accels;
         vec2d sensitivity = { 1, 1 };
 
-        mouse_modifier(const settings& args, vec2<si_pair*> luts = {}) :
-            combine_magnitudes(args.combine_mags)
+        mouse_modifier(const settings& args) :
+            apply_accel(args.apply_accel), combine_magnitudes(args.combine_mags)
         {
+            if (apply_accel) {
+                accels.x = accelerator(args.argsv.x, args.modes.x);
+                accels.y = accelerator(args.argsv.y, args.modes.y);
+            }
+
             if (args.degrees_rotation != 0) {
                 rotate = rotator(args.degrees_rotation);
                 apply_rotate = true;
@@ -229,16 +175,6 @@ namespace rawaccel {
             
             if (args.sens.x != 0) sensitivity.x = args.sens.x;
             if (args.sens.y != 0) sensitivity.y = args.sens.y;
-
-            if ((combine_magnitudes && args.modes.x == accel_mode::noaccel) ||
-                (args.modes.x == accel_mode::noaccel &&
-                    args.modes.y == accel_mode::noaccel)) {
-                return;
-            }
-
-            accels.x = accelerator(args.argsv.x, args.modes.x, luts.x);
-            accels.y = accelerator(args.argsv.y, args.modes.y, luts.y);
-            apply_accel = true;
         }
 
         void modify(vec2d& movement, milliseconds time) {

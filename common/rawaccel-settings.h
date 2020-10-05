@@ -1,7 +1,6 @@
 #pragma once
 
 #include "vec2.h"
-#include "accel-base.hpp"
 
 namespace rawaccel {
     using milliseconds = double;
@@ -9,17 +8,30 @@ namespace rawaccel {
     inline constexpr milliseconds WRITE_DELAY = 1000;
     inline constexpr milliseconds DEFAULT_TIME_MIN = 0.4;
 
-    enum class accel_mode {
-        linear, classic, natural, naturalgain, power, motivity, noaccel
+    struct gain {
+        enum class mode {
+            tanh, gd, erf, clamp, softplus
+        };
+        struct implementations;
+        struct function;
+        using lookup_value_t = double;
+    };
+
+    struct accel_args {
+        double motivity = 1;
+        double synchronous_speed = 1;
+        double gamma = 1;
+        double hard_cap = 0;
     };
 
     struct settings {
         double degrees_rotation = 0;
+        bool apply_accel = false;
         bool combine_mags = true;
-        vec2<accel_mode> modes = { accel_mode::noaccel, accel_mode::noaccel };
+        vec2<gain::mode> modes = {};
         vec2<accel_args> argsv;
         vec2d sens = { 1, 1 };
-        milliseconds time_min = DEFAULT_TIME_MIN;
+        double time_min = DEFAULT_TIME_MIN;
     };
 
 }
