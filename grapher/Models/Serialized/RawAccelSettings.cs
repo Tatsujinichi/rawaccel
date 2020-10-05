@@ -110,7 +110,7 @@ namespace grapher.Models.Serialized
 
         private void AddComments(JObject thisJO)
         {
-            string modes = string.Join(" | ", Enum.GetNames(typeof(AccelMode)));
+            string modes = string.Join(" | ", Enum.GetNames(typeof(GainMode)));
             ((JObject)thisJO[DriverSettings.Key])
                 .AddFirst(new JProperty("### Mode Types ###", modes));
         }

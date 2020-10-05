@@ -74,18 +74,28 @@ namespace grapher.Models.Options
 
         public bool IsWhole { get; private set; }
 
+        public int c { get; set; }
+
+        public bool IsOn
+        {
+            get
+            {
+                return (IsWhole && OptionSetX.Options.AccelDropdown.SelectedIndex > 0) ||
+                    (OptionSetX.Options.AccelDropdown.SelectedIndex > 0 && OptionSetY.Options.AccelDropdown.SelectedIndex > 0);
+            }
+        }
         #endregion Properties
 
         #region Methods
 
-        public Vec2<AccelMode> GetModes()
+        public Vec2<GainMode> GetModes()
         {
-            var xMode = (AccelMode)OptionSetX.Options.AccelerationIndex;
+            var xMode = (GainMode)OptionSetX.Options.AccelerationIndex;
 
-            return new Vec2<AccelMode>
+            return new Vec2<GainMode>
             {
                 x = xMode,
-                y = ByComponentVectorXYLock.Checked ? xMode : (AccelMode)OptionSetY.Options.AccelerationIndex
+                y = ByComponentVectorXYLock.Checked ? xMode : (GainMode)OptionSetY.Options.AccelerationIndex
             };
         }
 
@@ -109,15 +119,16 @@ namespace grapher.Models.Options
             int yMode,
             AccelArgs xArgs,
             AccelArgs yArgs,
+            bool isOn,
             bool isWhole)
         {
             Sensitivity.SetActiveValues(xSens, ySens);
             Rotation.SetActiveValue(rotation);
-            OptionSetX.SetActiveValues(xMode, xArgs);
+            OptionSetX.SetActiveValues(xMode, xArgs, isOn);
             WholeVectorMenuItem.Checked = isWhole;
             ByComponentVectorMenuItem.Checked = !isWhole;
             ByComponentVectorXYLock.Checked = xArgs.Equals(yArgs);
-            OptionSetY.SetActiveValues(yMode, yArgs);
+            OptionSetY.SetActiveValues(yMode, yArgs, isOn);
         }
 
         public void SetActiveValues(DriverSettings settings)
@@ -130,6 +141,7 @@ namespace grapher.Models.Options
                 (int)settings.modes.y,
                 settings.args.x,
                 settings.args.y,
+                settings.applyAccel,
                 settings.combineMagnitudes);
 
             AccelCharts.SetLogarithmic(

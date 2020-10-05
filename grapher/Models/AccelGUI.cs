@@ -117,6 +117,7 @@ namespace grapher
                     x = ApplyOptions.Sensitivity.Fields.X,
                     y = ApplyOptions.Sensitivity.Fields.Y
                 },
+                applyAccel = ApplyOptions.IsOn,
                 combineMagnitudes = ApplyOptions.IsWhole,
                 modes = ApplyOptions.GetModes(),
                 args = ApplyOptions.GetArgs(),

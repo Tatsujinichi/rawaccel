@@ -2,6 +2,7 @@
 using grapher.Models.Mouse;
 using grapher.Models.Options;
 using grapher.Models.Serialized;
+using Newtonsoft.Json.Serialization;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 
@@ -38,64 +39,46 @@ namespace grapher.Models
             TextBox sensitivityBoxX,
             TextBox sensitivityBoxY,
             TextBox rotationBox,
-            TextBox weightBoxX,
-            TextBox weightBoxY,
+
+            TextBox motivityBoxX,
+            TextBox motivityBoxY,
+            TextBox syncSpeedBoxX,
+            TextBox syncSpeedBoxY,
+            TextBox gammaBoxX,
+            TextBox gammaBoxY,
             TextBox capBoxX,
             TextBox capBoxY,
-            TextBox offsetBoxX,
-            TextBox offsetBoxY,
-            TextBox accelerationBoxX,
-            TextBox accelerationBoxY,
-            TextBox scaleBoxX,
-            TextBox scaleBoxY,
-            TextBox limitBoxX,
-            TextBox limitBoxY,
-            TextBox expBoxX,
-            TextBox expBoxY,
-            TextBox midpointBoxX,
-            TextBox midpointBoxY,
+
             CheckBox sensXYLock,
             CheckBox byComponentXYLock,
             Label lockXYLabel,
             Label sensitivityLabel,
             Label rotationLabel,
-            Label weightLabelX,
-            Label weightLabelY,
+
+            Label motivityLabelX,
+            Label motivityLabelY,
+            Label syncSpeedLabelX,
+            Label syncSpeedLabelY,
+            Label gammaLabelX,
+            Label gammaLabelY,
             Label capLabelX,
             Label capLabelY,
-            Label offsetLabelX,
-            Label offsetLabelY,
-            Label constantOneLabelX,
-            Label constantOneLabelY,
-            Label scaleLabelX,
-            Label scaleLabelY,
-            Label limitLabelX,
-            Label limitLabelY,
-            Label expLabelX,
-            Label expLabelY,
-            Label constantThreeLabelX,
-            Label constantThreeLabelY,
+
             Label activeValueTitleX,
             Label activeValueTitleY,
             Label sensitivityActiveXLabel,
             Label sensitivityActiveYLabel,
             Label rotationActiveLabel,
-            Label weightActiveXLabel,
-            Label weightActiveYLabel,
+
+            Label motivityActiveLabelX,
+            Label motivityActiveLabelY,
+            Label syncSpeedActiveLabelX,
+            Label syncSpeedActiveLabelY,
+            Label gammaActiveLabelX,
+            Label gammaActiveLabelY,
             Label capActiveXLabel,
             Label capActiveYLabel,
-            Label offsetActiveLabelX,
-            Label offsetActiveLabelY,
-            Label accelerationActiveLabelX,
-            Label accelerationActiveLabelY,
-            Label scaleActiveLabelX,
-            Label scaleActiveLabelY,
-            Label limitActiveLabelX,
-            Label limitActiveLabelY,
-            Label expActiveLabelX,
-            Label expActiveLabelY,
-            Label midpointActiveLabelX,
-            Label midpointActiveLabelY,
+
             Label accelTypeActiveLabelX,
             Label accelTypeActiveLabelY,
             Label optionSetXTitle,
@@ -139,24 +122,6 @@ namespace grapher.Models
 
             var optionSetYLeft = rotation.Left + rotation.Width;
 
-            var weightX = new Option(
-                weightBoxX,
-                form,
-                1,
-                weightLabelX,
-                0,
-                new ActiveValueLabel(weightActiveXLabel, activeValueTitleX),
-                "Weight");
-
-            var weightY = new Option(
-                weightBoxY,
-                form,
-                1,
-                weightLabelY,
-                optionSetYLeft,
-                new ActiveValueLabel(weightActiveYLabel, activeValueTitleY),
-                "Weight");
-
             var capX = new Option(
                 capBoxX,
                 form,
@@ -175,92 +140,42 @@ namespace grapher.Models
                 new ActiveValueLabel(capActiveYLabel, activeValueTitleY),
                 "Cap");
 
-            var offsetX = new Option(
-                offsetBoxX,
-                form,
-                0,
-                offsetLabelX,
-                0,
-                new ActiveValueLabel(offsetActiveLabelX, activeValueTitleX),
-                "Offset");
+            var defaults = (AccelArgs)DriverInterop.DefaultArgs;
 
-            var offsetY = new Option(
-                offsetBoxY,
-                form,
-                0,
-                offsetLabelY,
-                optionSetYLeft,
-                new ActiveValueLabel(offsetActiveLabelY, activeValueTitleY),
-                "Offset");
-
-            var offsetOptionsX = new OffsetOptions(
-                gainOffsetToolStripMenuItem,
-                legacyOffsetToolStripMenuItem,
-                offsetX);
-
-            var offsetOptionsY = new OffsetOptions(
-                gainOffsetToolStripMenuItem,
-                legacyOffsetToolStripMenuItem,
-                offsetY);
-
-            var accelerationX = new Option(
-                new Field(accelerationBoxX, form, 0),
-                constantOneLabelX,
-                new ActiveValueLabel(accelerationActiveLabelX, activeValueTitleX),
+            var motivityX = new Option(
+                new Field(motivityBoxX, form, defaults.motivity),
+                motivityLabelX,
+                new ActiveValueLabel(motivityActiveLabelX, activeValueTitleX),
                 0);
 
-            var accelerationY = new Option(
-                new Field(accelerationBoxY, form, 0),
-                constantOneLabelY,
-                new ActiveValueLabel(accelerationActiveLabelY, activeValueTitleY),
+            var motivityY = new Option(
+                new Field(motivityBoxY, form, defaults.motivity),
+                motivityLabelY,
+                new ActiveValueLabel(motivityActiveLabelY, activeValueTitleY),
                 optionSetYLeft);
 
-            var scaleX = new Option(
-                new Field(scaleBoxX, form, 0),
-                scaleLabelX,
-                new ActiveValueLabel(scaleActiveLabelX, activeValueTitleX),
+            var syncSpeedX = new Option(
+                new Field(syncSpeedBoxX, form, defaults.synchronousSpeed),
+                syncSpeedLabelX,
+                new ActiveValueLabel(syncSpeedActiveLabelX, activeValueTitleX),
                 0);
 
-            var scaleY = new Option(
-                new Field(scaleBoxY, form, 0),
-                scaleLabelY,
-                new ActiveValueLabel(scaleActiveLabelY, activeValueTitleY),
+            var syncSpeedY = new Option(
+                new Field(syncSpeedBoxY, form, defaults.synchronousSpeed),
+                syncSpeedLabelY,
+                new ActiveValueLabel(syncSpeedActiveLabelY, activeValueTitleY),
                 optionSetYLeft);
 
-            var limitX = new Option(
-                new Field(limitBoxX, form, 2),
-                limitLabelX,
-                new ActiveValueLabel(limitActiveLabelX, activeValueTitleX),
+            var gammaX = new Option(
+                new Field(gammaBoxX, form, defaults.gamma),
+                gammaLabelX,
+                new ActiveValueLabel(gammaActiveLabelX, activeValueTitleX),
                 0);
 
-            var limitY = new Option(
-                new Field(limitBoxY, form, 2),
-                limitLabelY,
-                new ActiveValueLabel(limitActiveLabelY, activeValueTitleY),
-                optionSetYLeft);
-
-            var exponentX = new Option(
-                new Field(expBoxX, form, 2),
-                expLabelX,
-                new ActiveValueLabel(expActiveLabelX, activeValueTitleX),
-                0);
-
-            var exponentY = new Option(
-                new Field(expBoxY, form, 2),
-                expLabelY,
-                new ActiveValueLabel(expActiveLabelY, activeValueTitleY),
-                optionSetYLeft);
-
-            var midpointX = new Option(
-                new Field(midpointBoxX, form, 0),
-                constantThreeLabelX,
-                new ActiveValueLabel(midpointActiveLabelX, activeValueTitleX),
-                0);
-
-            var midpointY = new Option(
-                new Field(midpointBoxY, form, 0),
-                constantThreeLabelY,
-                new ActiveValueLabel(midpointActiveLabelY, activeValueTitleY),
+            var gammaY = new Option(
+                new Field(gammaBoxY, form, defaults.gamma),
+                gammaLabelY,
+                new ActiveValueLabel(gammaActiveLabelY, activeValueTitleY),
                 optionSetYLeft);
 
             var capOptionsX = new CapOptions(
@@ -275,27 +190,19 @@ namespace grapher.Models
 
             var accelerationOptionsX = new AccelTypeOptions(
                 accelTypeDropX,
-                accelerationX,
-                scaleX,
+                motivityX,
+                syncSpeedX,
+                gammaX,
                 capOptionsX,
-                weightX,
-                offsetOptionsX,
-                limitX,
-                exponentX,
-                midpointX,
                 writeButton,
                 new ActiveValueLabel(accelTypeActiveLabelX, activeValueTitleX));
 
             var accelerationOptionsY = new AccelTypeOptions(
                 accelTypeDropY,
-                accelerationY,
-                scaleY,
+                motivityY,
+                syncSpeedY,
+                gammaY,
                 capOptionsY,
-                weightY,
-                offsetOptionsY,
-                limitY,
-                exponentY,
-                midpointY,
                 writeButton,
                 new ActiveValueLabel(accelTypeActiveLabelY, activeValueTitleY));
 

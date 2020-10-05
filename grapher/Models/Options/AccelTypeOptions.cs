@@ -14,13 +14,8 @@ namespace grapher
 
         public static readonly Dictionary<string, LayoutBase> AccelerationTypes = new List<LayoutBase>
         {
-            new LinearLayout(),
-            new ClassicLayout(),
-            new NaturalLayout(),
-            new NaturalGainLayout(),
-            new PowerLayout(),
-            new MotivityLayout(),
-            new OffLayout()
+            new OffLayout(),
+            new TanhLayout()
         }.ToDictionary(k => k.Name);
 
         #endregion Fields
@@ -29,14 +24,10 @@ namespace grapher
 
         public AccelTypeOptions(
             ComboBox accelDropdown,
-            Option acceleration,
-            Option scale,
+            Option motivity,
+            Option syncSpeed,
+            Option gamma,
             CapOptions cap,
-            Option weight,
-            OffsetOptions offset,
-            Option limit,
-            Option exponent,
-            Option midpoint,
             Button writeButton,
             ActiveValueLabel accelTypeActiveValue)
         {
@@ -45,14 +36,10 @@ namespace grapher
             AccelDropdown.Items.AddRange(AccelerationTypes.Keys.ToArray());
             AccelDropdown.SelectedIndexChanged += new System.EventHandler(OnIndexChanged);
 
-            Acceleration = acceleration;
-            Scale = scale;
+            Motivity = motivity;
+            SynchronousSpeed = syncSpeed;
+            Gamma = gamma;
             Cap = cap;
-            Weight = weight;
-            Offset = offset;
-            Limit = limit;
-            Exponent = exponent;
-            Midpoint = midpoint;
             WriteButton = writeButton;
             AccelTypeActiveValue = accelTypeActiveValue;
 
@@ -84,21 +71,13 @@ namespace grapher
 
         public ActiveValueLabel AccelTypeActiveValue { get; }
 
-        public Option Acceleration { get; }
-
-        public Option Scale { get; }
-
         public CapOptions Cap { get; }
 
-        public Option Weight { get; }
+        public Option Motivity { get; }
 
-        public OffsetOptions Offset { get; }
+        public Option SynchronousSpeed { get; }
 
-        public Option Limit { get; }
-
-        public Option Exponent { get; }
-
-        public Option Midpoint { get; }
+        public Option Gamma { get; }
 
         public override int Top 
         {
@@ -164,15 +143,10 @@ namespace grapher
         {
             AccelDropdown.Hide();
             AccelTypeActiveValue.Hide();
-
-            Acceleration.Hide();
-            Scale.Hide();
+            Motivity.Hide();
+            SynchronousSpeed.Hide();
+            Gamma.Hide();
             Cap.Hide();
-            Weight.Hide();
-            Offset.Hide();
-            Limit.Hide();
-            Exponent.Hide();
-            Midpoint.Hide();
         }
 
         public void Show()
@@ -187,20 +161,24 @@ namespace grapher
             Show();
         }
 
-        public void SetActiveValues(int index, AccelArgs args)
+        public void SetActiveValues(int index, AccelArgs args, bool on)
         {
-            AccelerationType = AccelerationTypes.Where(t => t.Value.Index == index).FirstOrDefault().Value;
-            AccelTypeActiveValue.SetValue(AccelerationType.Name);
-            AccelDropdown.SelectedIndex = AccelerationType.Index;
+            if (on)
+            {
+                AccelerationType = AccelerationTypes.Where(t => t.Value.Index == index).FirstOrDefault().Value;
+            }
+            else
+            {
+                AccelerationType = AccelerationTypes.FirstOrDefault().Value;
+            }
 
-            Weight.SetActiveValue(args.weight);
-            Cap.SetActiveValues(args.gainCap, args.scaleCap, args.gainCap > 0 || args.scaleCap <= 0);
-            Offset.SetActiveValue(args.offset, args.legacyOffset);
-            Acceleration.SetActiveValue(args.acceleration);
-            Scale.SetActiveValue(args.scale);
-            Limit.SetActiveValue(args.limit);
-            Exponent.SetActiveValue(args.exponent);
-            Midpoint.SetActiveValue(args.midpoint);
+            AccelTypeActiveValue.SetValue(AccelerationType.Name);
+            AccelDropdown.SelectedIndex = AccelerationType.Index + 1;
+
+            Motivity.SetActiveValue(args.motivity);
+            SynchronousSpeed.SetActiveValue(args.synchronousSpeed);
+            Gamma.SetActiveValue(args.gamma);
+            Cap.SetActiveValues(0, args.scaleCap, false);
         }
 
         public void ShowFull()
@@ -210,8 +188,8 @@ namespace grapher
                 AccelDropdown.Text = Constants.AccelDropDownDefaultFullText;
             }
 
-            Left = Acceleration.Left + Constants.DropDownLeftSeparation;
-            Width = Acceleration.Width - Constants.DropDownLeftSeparation;
+            Left = Motivity.Left + Constants.DropDownLeftSeparation;
+            Width = Motivity.Width - Constants.DropDownLeftSeparation;
         }
 
         public void ShowShortened()
@@ -221,23 +199,17 @@ namespace grapher
                 AccelDropdown.Text = Constants.AccelDropDownDefaultShortText;
             }
 
-            Left = Acceleration.Field.Left;
-            Width = Acceleration.Field.Width;
+            Left = Motivity.Field.Left;
+            Width = Motivity.Field.Width;
         }
 
         public void SetArgs(ref AccelArgs args)
         {
-            AccelArgs defaults = DriverInterop.DefaultSettings.args.x;
-            args.acceleration = Acceleration.Visible ? Acceleration.Field.Data : defaults.acceleration;
-            args.scale = Scale.Visible ? Scale.Field.Data : defaults.scale;
-            args.gainCap = Cap.Visible ? Cap.VelocityGainCap : defaults.gainCap;
+            AccelArgs defaults = (AccelArgs)DriverInterop.DefaultArgs;
+            args.motivity = Motivity.Visible ? Motivity.Field.Data : defaults.motivity;
+            args.synchronousSpeed = SynchronousSpeed.Visible ? SynchronousSpeed.Field.Data : defaults.synchronousSpeed;
+            args.gamma = Gamma.Visible ? Gamma.Field.Data : defaults.gamma;
             args.scaleCap = Cap.Visible ? Cap.SensitivityCap : defaults.scaleCap;
-            args.limit = Limit.Visible ? Limit.Field.Data : defaults.limit;
-            args.exponent = Exponent.Visible ? Exponent.Field.Data : defaults.exponent;
-            args.offset = Offset.Visible ? Offset.Offset : defaults.offset;
-            args.legacyOffset = Offset.IsLegacy;
-            args.midpoint = Midpoint.Visible ? Midpoint.Field.Data : defaults.midpoint;
-            args.weight = Weight.Visible ? Weight.Field.Data : defaults.weight;
         }
 
         public AccelArgs GenerateArgs()
@@ -250,14 +222,10 @@ namespace grapher
         public override void AlignActiveValues()
         {
             AccelTypeActiveValue.Align();
-            Acceleration.AlignActiveValues();
-            Scale.AlignActiveValues();
+            Motivity.AlignActiveValues();
+            SynchronousSpeed.AlignActiveValues();
+            Gamma.AlignActiveValues();
             Cap.AlignActiveValues();
-            Offset.AlignActiveValues();
-            Weight.AlignActiveValues();
-            Limit.AlignActiveValues();
-            Exponent.AlignActiveValues();
-            Midpoint.AlignActiveValues();
         }
 
         private void OnIndexChanged(object sender, EventArgs e)
@@ -277,18 +245,14 @@ namespace grapher
         {
             if (top < 0)
             {
-                top = Acceleration.Top;
+                top = Motivity.Top;
             }
 
             AccelerationType.Layout(
-                Acceleration,
-                Scale,
+                Motivity,
+                SynchronousSpeed,
+                Gamma,
                 Cap,
-                Weight,
-                Offset,
-                Limit,
-                Exponent,
-                Midpoint,
                 WriteButton,
                 top);
         }

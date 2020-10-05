@@ -5,27 +5,18 @@ namespace grapher.Layouts
 {
     public abstract class LayoutBase
     {
-        public const string Acceleration = "Acceleration";
-        public const string Scale = "Scale";
-        public const string Exponent = "Exponent";
-        public const string Limit = "Limit";
-        public const string Midpoint = "Midpoint";
         public const string Motivity = "Motivity";
-        public const string Offset = "Offset";
-        public const string Cap = "Cap";
-        public const string Weight = "Weight";
+        public const string SynchronousSpeed = "Sync. Speed";
+        public const string Gamma = "Gamma";
 
         public LayoutBase()
         {
-            AccelLayout = new OptionLayout(false, string.Empty);
-            ScaleLayout = new OptionLayout(false, string.Empty);
+            MotivityLayout = new OptionLayout(false, string.Empty);
+            SynchronousSpeedLayout = new OptionLayout(false, string.Empty);
+            GammaLayout = new OptionLayout(false, string.Empty);
             CapLayout = new OptionLayout(false, string.Empty);
-            WeightLayout = new OptionLayout(false, string.Empty);
-            OffsetLayout = new OptionLayout(false, string.Empty);
-            LimitLayout = new OptionLayout(false, string.Empty);
-            ExponentLayout = new OptionLayout(false, string.Empty);
-            MidpointLayout = new OptionLayout(false, string.Empty);
 
+            ButtonEnabled = true;
             LogarithmicCharts = false;
         }
 
@@ -39,46 +30,33 @@ namespace grapher.Layouts
 
         public bool LogarithmicCharts { get; protected set; }
 
-        protected OptionLayout AccelLayout { get; set; }
+        protected bool ButtonEnabled { get; set; }
 
-        protected OptionLayout ScaleLayout { get; set; }
+        protected OptionLayout MotivityLayout { get; set; }
+
+        protected OptionLayout SynchronousSpeedLayout { get; set; }
+
+        protected OptionLayout GammaLayout { get; set; }
 
         protected OptionLayout CapLayout { get; set; }
 
-        protected OptionLayout WeightLayout { get; set; }
-
-        protected OptionLayout OffsetLayout { get; set; }
-
-        protected OptionLayout LimitLayout { get; set; }
-
-        protected OptionLayout ExponentLayout { get; set; }
-
-        protected OptionLayout MidpointLayout { get; set; }
-
         public void Layout(
-            IOption accelOption,
-            IOption scaleOption,
+            IOption motivityOption,
+            IOption synchronousSpeedOption,
+            IOption gammaOption,
             IOption capOption,
-            IOption weightOption,
-            IOption offsetOption,
-            IOption limitOption,
-            IOption expOption,
-            IOption midpointOption,
             Button button,
             int top)
         {
+            button.Enabled = ButtonEnabled;
 
             IOption previous = null;
 
             foreach (var option in new (OptionLayout, IOption)[] {
-                (AccelLayout, accelOption),
-                (ScaleLayout, scaleOption),
-                (CapLayout, capOption),
-                (WeightLayout, weightOption),
-                (OffsetLayout, offsetOption),
-                (LimitLayout, limitOption),
-                (ExponentLayout, expOption),
-                (MidpointLayout, midpointOption)})
+                (MotivityLayout, motivityOption),
+                (SynchronousSpeedLayout, synchronousSpeedOption),
+                (GammaLayout, gammaOption),
+                (CapLayout, capOption)})
             {
                 option.Item1.Layout(option.Item2);
 
@@ -99,26 +77,18 @@ namespace grapher.Layouts
         }
 
         public void Layout(
-            IOption accelOption,
-            IOption scaleOption,
+            IOption motivityOption,
+            IOption synchronousSpeedOption,
+            IOption gammaOption,
             IOption capOption,
-            IOption weightOption,
-            IOption offsetOption,
-            IOption limitOption,
-            IOption expOption,
-            IOption midpointOption,
             Button button)
         {
-            Layout(accelOption,
-                scaleOption,
+            Layout(motivityOption,
+                synchronousSpeedOption,
+                gammaOption,
                 capOption,
-                weightOption,
-                offsetOption,
-                limitOption,
-                expOption,
-                midpointOption,
                 button,
-                accelOption.Top);
+                motivityOption.Top);
         }
     }
 }

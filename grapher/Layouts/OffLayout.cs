@@ -8,17 +8,14 @@ namespace grapher.Layouts
             : base()
         {
             Name = "Off";
-            Index = (int)AccelMode.noaccel;
+            Index = -1;
+            ButtonEnabled = true;
             LogarithmicCharts = false;
 
-            AccelLayout = new OptionLayout(false, string.Empty);
-            ScaleLayout = new OptionLayout(false, string.Empty);
+            MotivityLayout = new OptionLayout(false, string.Empty);
+            SynchronousSpeedLayout = new OptionLayout(false, string.Empty);
+            GammaLayout = new OptionLayout(false, string.Empty);
             CapLayout = new OptionLayout(false, string.Empty);
-            WeightLayout = new OptionLayout(false, string.Empty);
-            OffsetLayout = new OptionLayout(false, string.Empty);
-            LimitLayout = new OptionLayout(false, string.Empty);
-            ExponentLayout = new OptionLayout(false, string.Empty);
-            MidpointLayout = new OptionLayout(false, string.Empty);
         }
     }
 }
