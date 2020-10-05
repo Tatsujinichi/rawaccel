@@ -59,6 +59,9 @@ bool yes() {
     return b;
 }
 
+int main() {}
+
+/*
 bool try_convert(const fs::path& fp) {
     std::vector<std::pair<std::string, double>> kv_pairs;
 
@@ -220,3 +223,4 @@ int main()
     std::cout << "Press any key to close this window . . .\n";
     _getwch();
 }
+*/
