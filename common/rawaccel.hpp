@@ -199,14 +199,17 @@ namespace rawaccel {
 
                 if (combine_magnitudes) {
                     double mag = sqrtsd(movement.x * movement.x + movement.y * movement.y);
+                    if (mag == 0) return;
                     double speed = mag / time;
                     double scale = accels.x.apply(speed);
                     movement.x *= scale;
                     movement.y *= scale;
                 }
                 else {
-                    movement.x *= accels.x.apply(fabs(movement.x) / time);
-                    movement.y *= accels.y.apply(fabs(movement.y) / time);
+                    if (movement.x != 0) 
+                        movement.x *= accels.x.apply(fabs(movement.x) / time);
+                    if (movement.y != 0)
+                        movement.y *= accels.y.apply(fabs(movement.y) / time);
                 }
             }
         }
