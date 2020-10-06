@@ -85,7 +85,7 @@ namespace rawaccel {
             switch (tag) {
             case mode::tanh: return impls::tanh(x);
             case mode::gd:   return impls::gd(x);
-            default:         return 1;
+            default:         return 0;
             }
         }
     };
@@ -97,26 +97,28 @@ namespace rawaccel {
             gain::lookup_value_t* lut;
         } gain_u = {};
         
-        struct cache_t {
-            double M = 1;
+        struct transfer_constants {
+            double M = 0;
             double A = 0;
             double C = 0;
             double G = 0;
-        } cache;
+        } constants;
 
         accel_scale_clamp clamp;
 
         accelerator(const accel_args& args) : clamp(args.hard_cap) {
-            if (args.gamma <= 0 || args.motivity <= 1) {
+            if (args.gamma == 0 || args.motivity <= 1) {
+                constants.M = 1; // edge case of unable to have contrast
                 return;
             }
 
-            cache.M = args.motivity;
-            
             if (args.synchronous_speed > 0) {
-                cache.A = log(args.synchronous_speed);
-                cache.C = log(args.motivity);
-                cache.G = args.gamma / cache.C;
+                constants.A = log(args.synchronous_speed);
+                constants.C = log(args.motivity);
+                constants.G = args.gamma / constants.C;
+            }
+            else {
+                constants.M = args.motivity; // edge case of always at max val
             }
         }
 
@@ -132,11 +134,11 @@ namespace rawaccel {
 
         template <typename Func>
         inline double accel_impl(double speed, Func fn) const {
-            if (cache.M == 1 || cache.C == 0)
-                return cache.M;
+            if (constants.M > 0)
+                return constants.M;
 
-            auto transferred = cache.G * (log(speed) - cache.A);
-            return clamp(exp(fn(transferred) * cache.C));
+            auto transferred = constants.G * (log(speed) - constants.A);
+            return clamp(exp(fn(transferred) * constants.C));
         }
 
         inline double apply(double speed) const {
