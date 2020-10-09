@@ -15,7 +15,6 @@ namespace grapher.Layouts
             MotivityLayout = new OptionLayout(false, string.Empty);
             SynchronousSpeedLayout = new OptionLayout(false, string.Empty);
             GammaLayout = new OptionLayout(false, string.Empty);
-            CapLayout = new OptionLayout(false, string.Empty);
         }
     }
 }

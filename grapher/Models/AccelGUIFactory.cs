@@ -46,8 +46,6 @@ namespace grapher.Models
             TextBox syncSpeedBoxY,
             TextBox gammaBoxX,
             TextBox gammaBoxY,
-            TextBox capBoxX,
-            TextBox capBoxY,
 
             CheckBox sensXYLock,
             CheckBox byComponentXYLock,
@@ -61,8 +59,6 @@ namespace grapher.Models
             Label syncSpeedLabelY,
             Label gammaLabelX,
             Label gammaLabelY,
-            Label capLabelX,
-            Label capLabelY,
 
             Label activeValueTitleX,
             Label activeValueTitleY,
@@ -76,8 +72,6 @@ namespace grapher.Models
             Label syncSpeedActiveLabelY,
             Label gammaActiveLabelX,
             Label gammaActiveLabelY,
-            Label capActiveXLabel,
-            Label capActiveYLabel,
 
             Label accelTypeActiveLabelX,
             Label accelTypeActiveLabelY,
@@ -122,25 +116,8 @@ namespace grapher.Models
 
             var optionSetYLeft = rotation.Left + rotation.Width;
 
-            var capX = new Option(
-                capBoxX,
-                form,
-                0,
-                capLabelX,
-                0,
-                new ActiveValueLabel(capActiveXLabel, activeValueTitleX),
-                "Cap");
 
-            var capY = new Option(
-                capBoxY,
-                form,
-                0,
-                capLabelY,
-                optionSetYLeft,
-                new ActiveValueLabel(capActiveYLabel, activeValueTitleY),
-                "Cap");
-
-            var defaults = (AccelArgs)DriverInterop.DefaultArgs;
+            var defaults = DriverInterop.DefaultSettings.args.x;
 
             var motivityX = new Option(
                 new Field(motivityBoxX, form, defaults.motivity),
@@ -178,22 +155,11 @@ namespace grapher.Models
                 new ActiveValueLabel(gammaActiveLabelY, activeValueTitleY),
                 optionSetYLeft);
 
-            var capOptionsX = new CapOptions(
-                velocityGainCapToolStripMenuItem,
-                legacyCapToolStripMenuItem,
-                capX);
-
-            var capOptionsY = new CapOptions(
-                velocityGainCapToolStripMenuItem,
-                legacyCapToolStripMenuItem,
-                capY);
-
             var accelerationOptionsX = new AccelTypeOptions(
                 accelTypeDropX,
                 motivityX,
                 syncSpeedX,
                 gammaX,
-                capOptionsX,
                 writeButton,
                 new ActiveValueLabel(accelTypeActiveLabelX, activeValueTitleX));
 
@@ -202,7 +168,6 @@ namespace grapher.Models
                 motivityY,
                 syncSpeedY,
                 gammaY,
-                capOptionsY,
                 writeButton,
                 new ActiveValueLabel(accelTypeActiveLabelY, activeValueTitleY));
 

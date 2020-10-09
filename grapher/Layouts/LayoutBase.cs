@@ -14,7 +14,6 @@ namespace grapher.Layouts
             MotivityLayout = new OptionLayout(false, string.Empty);
             SynchronousSpeedLayout = new OptionLayout(false, string.Empty);
             GammaLayout = new OptionLayout(false, string.Empty);
-            CapLayout = new OptionLayout(false, string.Empty);
 
             ButtonEnabled = true;
             LogarithmicCharts = false;
@@ -38,13 +37,10 @@ namespace grapher.Layouts
 
         protected OptionLayout GammaLayout { get; set; }
 
-        protected OptionLayout CapLayout { get; set; }
-
         public void Layout(
             IOption motivityOption,
             IOption synchronousSpeedOption,
             IOption gammaOption,
-            IOption capOption,
             Button button,
             int top)
         {
@@ -55,8 +51,7 @@ namespace grapher.Layouts
             foreach (var option in new (OptionLayout, IOption)[] {
                 (MotivityLayout, motivityOption),
                 (SynchronousSpeedLayout, synchronousSpeedOption),
-                (GammaLayout, gammaOption),
-                (CapLayout, capOption)})
+                (GammaLayout, gammaOption)})
             {
                 option.Item1.Layout(option.Item2);
 
@@ -80,13 +75,11 @@ namespace grapher.Layouts
             IOption motivityOption,
             IOption synchronousSpeedOption,
             IOption gammaOption,
-            IOption capOption,
             Button button)
         {
             Layout(motivityOption,
                 synchronousSpeedOption,
                 gammaOption,
-                capOption,
                 button,
                 motivityOption.Top);
         }

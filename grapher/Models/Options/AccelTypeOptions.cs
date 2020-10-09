@@ -27,7 +27,6 @@ namespace grapher
             Option motivity,
             Option syncSpeed,
             Option gamma,
-            CapOptions cap,
             Button writeButton,
             ActiveValueLabel accelTypeActiveValue)
         {
@@ -39,7 +38,6 @@ namespace grapher
             Motivity = motivity;
             SynchronousSpeed = syncSpeed;
             Gamma = gamma;
-            Cap = cap;
             WriteButton = writeButton;
             AccelTypeActiveValue = accelTypeActiveValue;
 
@@ -70,8 +68,6 @@ namespace grapher
         public LayoutBase AccelerationType { get; private set; }
 
         public ActiveValueLabel AccelTypeActiveValue { get; }
-
-        public CapOptions Cap { get; }
 
         public Option Motivity { get; }
 
@@ -146,7 +142,6 @@ namespace grapher
             Motivity.Hide();
             SynchronousSpeed.Hide();
             Gamma.Hide();
-            Cap.Hide();
         }
 
         public void Show()
@@ -178,7 +173,6 @@ namespace grapher
             Motivity.SetActiveValue(args.motivity);
             SynchronousSpeed.SetActiveValue(args.synchronousSpeed);
             Gamma.SetActiveValue(args.gamma);
-            Cap.SetActiveValues(0, args.scaleCap, false);
         }
 
         public void ShowFull()
@@ -205,11 +199,10 @@ namespace grapher
 
         public void SetArgs(ref AccelArgs args)
         {
-            AccelArgs defaults = (AccelArgs)DriverInterop.DefaultArgs;
+            AccelArgs defaults = DriverInterop.DefaultSettings.args.x;
             args.motivity = Motivity.Visible ? Motivity.Field.Data : defaults.motivity;
             args.synchronousSpeed = SynchronousSpeed.Visible ? SynchronousSpeed.Field.Data : defaults.synchronousSpeed;
             args.gamma = Gamma.Visible ? Gamma.Field.Data : defaults.gamma;
-            args.scaleCap = Cap.Visible ? Cap.SensitivityCap : defaults.scaleCap;
         }
 
         public AccelArgs GenerateArgs()
@@ -225,7 +218,6 @@ namespace grapher
             Motivity.AlignActiveValues();
             SynchronousSpeed.AlignActiveValues();
             Gamma.AlignActiveValues();
-            Cap.AlignActiveValues();
         }
 
         private void OnIndexChanged(object sender, EventArgs e)
@@ -252,7 +244,6 @@ namespace grapher
                 Motivity,
                 SynchronousSpeed,
                 Gamma,
-                Cap,
                 WriteButton,
                 top);
         }
