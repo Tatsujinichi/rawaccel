@@ -17,6 +17,7 @@ using lut_value_t = ra::si_pair;
 
 struct {
     ra::settings args;
+    bool send_last = false;
     milliseconds tick_interval = 0; // set in DriverEntry
     ra::mouse_modifier modifier;
     vec2<lut_value_t*> lookups = {};
@@ -64,6 +65,18 @@ Arguments:
 
         auto it = InputDataStart;
         do {
+            if (it->ExtraInformation) {
+                DebugPrint(("RA extra info 0x%x", it->ExtraInformation));
+            }
+            if (global.send_last) {
+                short last[2] = {
+                    static_cast<short>(it->LastX),
+                    static_cast<short>(it->LastY)
+                };
+
+                it->ExtraInformation = *reinterpret_cast<ULONG*>(last);
+            }
+
             vec2d input = {
                 static_cast<double>(it->LastX),
                 static_cast<double>(it->LastY)
@@ -142,69 +155,68 @@ Return Value:
 {
     NTSTATUS status;
     void* buffer;
-    size_t size;
 
     UNREFERENCED_PARAMETER(Queue);
-    
-
+    UNREFERENCED_PARAMETER(OutputBufferLength);
+    UNREFERENCED_PARAMETER(InputBufferLength);
     PAGED_CODE();
 
     DebugPrint(("Ioctl received into filter control object.\n"));
 
-    if (IoControlCode == RA_WRITE && InputBufferLength == sizeof(ra::settings)) {
-        LARGE_INTEGER interval;
-        interval.QuadPart = static_cast<LONGLONG>(ra::WRITE_DELAY) * -10000;
-        KeDelayExecutionThread(KernelMode, FALSE, &interval);
-
-        status = WdfRequestRetrieveInputBuffer(
-            Request,
-            sizeof(ra::settings),
-            &buffer,
-            &size
-        );
-
-        if (!NT_SUCCESS(status)) {
-            DebugPrint(("RetrieveInputBuffer failed: 0x%x\n", status));
-            // status maps to win32 error code 1359: ERROR_INTERNAL_ERROR
-            WdfRequestComplete(Request, STATUS_MESSAGE_LOST);
-            return;
-        }
-
-        ra::settings new_settings = *reinterpret_cast<ra::settings*>(buffer);
-
-        if (new_settings.time_min <= 0 || _isnanf(static_cast<float>(new_settings.time_min))) {
-            new_settings.time_min = ra::settings{}.time_min;
-        }
-
-        global.args = new_settings;
-        global.modifier = { global.args, global.lookups };
-
-        WdfRequestComplete(Request, STATUS_SUCCESS);
-    }
-    else if (IoControlCode == RA_READ && OutputBufferLength == sizeof(ra::settings)) {
+    switch (IoControlCode) {
+    case RA_READ: 
         status = WdfRequestRetrieveOutputBuffer(
             Request,
             sizeof(ra::settings),
             &buffer,
-            &size
+            NULL
         );
-
         if (!NT_SUCCESS(status)) {
             DebugPrint(("RetrieveOutputBuffer failed: 0x%x\n", status));
-            // status maps to win32 error code 1359: ERROR_INTERNAL_ERROR
-            WdfRequestComplete(Request, STATUS_MESSAGE_LOST);
-            return;
         }
+        else {
+            *reinterpret_cast<ra::settings*>(buffer) = global.args;
+        }
+        break;
+    case RA_WRITE: 
+        status = WdfRequestRetrieveInputBuffer(
+            Request,
+            sizeof(ra::settings),
+            &buffer,
+            NULL
+        );
+        if (!NT_SUCCESS(status)) {
+            DebugPrint(("RetrieveInputBuffer failed: 0x%x\n", status));
+        }
+        else {
+            LARGE_INTEGER interval;
+            interval.QuadPart = static_cast<LONGLONG>(ra::WRITE_DELAY) * -10000;
+            KeDelayExecutionThread(KernelMode, FALSE, &interval);
 
-        *reinterpret_cast<ra::settings*>(buffer) = global.args;
+            ra::settings new_settings = *reinterpret_cast<ra::settings*>(buffer);
 
-        WdfRequestComplete(Request, STATUS_SUCCESS);
+            if (new_settings.time_min <= 0 || _isnanf(static_cast<float>(new_settings.time_min))) {
+                new_settings.time_min = ra::settings{}.time_min;
+            }
+
+            global.args = new_settings;
+            global.modifier = { global.args, global.lookups };
+        }
+        break;
+    case RA_ENABLE_SEND_LAST:
+        status = STATUS_SUCCESS;
+        global.send_last = true;
+        break;
+    case RA_DISABLE_SEND_LAST:
+        status = STATUS_SUCCESS;
+        global.send_last = false;
+        break;
+    default:
+        status = STATUS_INVALID_DEVICE_REQUEST;
+        break;
     }
-    else {
-        DebugPrint(("Received unknown request: in %uB, out %uB\n", InputBufferLength, OutputBufferLength));
-        // status maps to win32 error code 1784: ERROR_INVALID_USER_BUFFER
-        WdfRequestComplete(Request, STATUS_INVALID_BUFFER_SIZE);
-    }
+
+    WdfRequestComplete(Request, status);
 
 }
 #pragma warning(pop) // enable 28118 again
@@ -402,7 +414,7 @@ Error:
         WdfObjectDelete(controlDevice);
     }
 
-    DebugPrint(("CreateControlDevice failed\n", status));
+    DebugPrint(("CreateControlDevice failed %x\n", status));
 }
 
 

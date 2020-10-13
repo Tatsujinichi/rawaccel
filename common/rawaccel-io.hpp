@@ -14,7 +14,7 @@
 
 namespace rawaccel {
 
-	settings read() {
+	void io_control(DWORD code, void* in, DWORD in_size, void* out, DWORD out_size) {
 		HANDLE ra_handle = INVALID_HANDLE_VALUE;
 
 		ra_handle = CreateFileW(L"\\\\.\\rawaccel", 0, 0, 0, OPEN_EXISTING, 0, 0);
@@ -23,18 +23,17 @@ namespace rawaccel {
 			throw install_error();
 		}
 
-		settings args;
 		DWORD dummy;
 
 		BOOL success = DeviceIoControl(
 			ra_handle,
-			RA_READ,
-			NULL,					  // input buffer
-			0,                        // input buffer size
-			&args,                    // output buffer
-			sizeof(settings),         // output buffer size
-			&dummy,                   // bytes returned
-			NULL                      // overlapped structure
+			code,
+			in,
+			in_size,
+			out,
+			out_size,
+			&dummy,  // bytes returned
+			NULL     // overlapped structure
 		);
 
 		CloseHandle(ra_handle);
@@ -42,38 +41,23 @@ namespace rawaccel {
 		if (!success) {
 			throw std::system_error(GetLastError(), std::system_category(), "DeviceIoControl failed");
 		}
+	}
 
+	settings read() {
+		settings args;
+		io_control(RA_READ, NULL, 0, &args, sizeof(settings));
 		return args;
 	}
 
 
 	void write(const settings& args) {
-		HANDLE ra_handle = INVALID_HANDLE_VALUE;
+		auto in_ptr = const_cast<settings*>(&args);
+		io_control(RA_WRITE, in_ptr, sizeof(settings), NULL, 0);
+	}
 
-		ra_handle = CreateFileW(L"\\\\.\\rawaccel", 0, 0, 0, OPEN_EXISTING, 0, 0);
-
-		if (ra_handle == INVALID_HANDLE_VALUE) {
-			throw install_error();
-		}
-
-		DWORD dummy;
-
-		BOOL success = DeviceIoControl(
-			ra_handle,
-			RA_WRITE,
-			const_cast<settings*>(&args),      // input buffer
-			sizeof(settings),                  // input buffer size
-			NULL,                              // output buffer
-			0,                                 // output buffer size
-			&dummy,                            // bytes returned
-			NULL                               // overlapped structure
-		);
-
-		CloseHandle(ra_handle);
-
-		if (!success) {
-			throw std::system_error(GetLastError(), std::system_category(), "DeviceIoControl failed");
-		}
+	void last_in_extra(BOOL enable) {
+		DWORD code = enable ? RA_ENABLE_SEND_LAST : RA_DISABLE_SEND_LAST;
+		io_control(code, NULL, 0, NULL, 0);
 	}
 
 }
