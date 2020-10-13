@@ -5,11 +5,9 @@
 #define NOMINMAX
 #include <Windows.h>
 
+#include "rawaccel-io-def.h"
 #include "rawaccel-settings.h"
 #include "rawaccel-error.hpp"
-
-#define RA_READ CTL_CODE(0x8888, 0x888, METHOD_OUT_DIRECT, FILE_ANY_ACCESS)
-#define RA_WRITE CTL_CODE(0x8888, 0x889, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 #pragma warning(push)
 #pragma warning(disable:4245) // int -> DWORD conversion while passing CTL_CODE
