@@ -40,12 +40,14 @@ namespace grapher
             DefaultButtonFont = WriteButton.Font;
             SmallButtonFont = new Font(WriteButton.Font.Name, WriteButton.Font.Size * Constants.SmallButtonSizeFactor);
 
+            DriverInterop.SetSendUnmodified(true);
             MouseWatcher = mouseWatcher;
 
             ScaleMenuItem.Click += new System.EventHandler(OnScaleMenuItemClick);
             WriteButton.Click += new System.EventHandler(OnWriteButtonClick);
             ToggleButton.Click += new System.EventHandler(OnToggleButtonClick);
             AccelForm.FormClosing += new FormClosingEventHandler(SaveGUISettingsOnClose);
+            AccelForm.FormClosing += new FormClosingEventHandler(DisableSendUnmodified);
 
             ButtonTimerInterval = Convert.ToInt32(DriverInterop.WriteDelayMs);
             ButtonTimer = new Timer();
@@ -103,6 +105,11 @@ namespace grapher
                 Settings.RawAccelSettings.GUISettings = guiSettings;
                 Settings.RawAccelSettings.Save();
             }
+        }
+
+        private void DisableSendUnmodified(Object sender, FormClosingEventArgs e)
+        {
+            DriverInterop.SetSendUnmodified(false);
         }
 
         public void UpdateActiveSettingsFromFields()

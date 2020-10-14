@@ -545,10 +545,23 @@ namespace grapher.Models.Mouse
             /// depending on the value of usFlags.
             /// </summary>
             public int LastY;
+
+            [StructLayout(LayoutKind.Explicit)]
+            public struct ExtraInfoUnion
+            {
+                [FieldOffset(0)]
+                public uint value;
+
+                [FieldOffset(0)]
+                public short unmodifiedX;
+                [FieldOffset(2)]
+                public short unmodifiedY;
+            }
+
             /// <summary>
             /// The device-specific additional information for the event.
             /// </summary>
-            public uint ExtraInformation;
+            public ExtraInfoUnion ExtraInformation;
         }
 
         /// <summary>
@@ -745,10 +758,11 @@ namespace grapher.Models.Mouse
                 PollRate = PollRateField.Data;
                 PollTime = 1000 / PollRate;
             }
-
-            if (rawInput.Data.Mouse.LastX != 0 || rawInput.Data.Mouse.LastY != 0)
+            short dx = rawInput.Data.Mouse.ExtraInformation.unmodifiedX;
+            short dy = rawInput.Data.Mouse.ExtraInformation.unmodifiedY;
+            if (dx != 0 || dy != 0)
             {
-                OnMouseMove(rawInput.Data.Mouse.LastX, rawInput.Data.Mouse.LastY, PollTime);
+                OnMouseMove(dx, dy, PollTime);
             }
 
         }
