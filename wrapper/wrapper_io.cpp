@@ -34,3 +34,18 @@ void wrapper_io::readFromDriver(settings& args)
 		throw gcnew DriverIOException(gcnew String(e.what()));
 	}
 }
+
+void wrapper_io::sendLastInExtra(w32_bool enable) {
+	try
+	{
+		last_in_extra(enable);
+	}
+	catch (const install_error&)
+	{
+		throw gcnew DriverNotInstalledException();
+	}
+	catch (const std::system_error& e)
+	{
+		throw gcnew DriverIOException(gcnew String(e.what()));
+	}
+}

@@ -194,6 +194,11 @@ public ref struct DriverInterop
         return get_default();
     }
 
+    static void SetSendUnmodified(Boolean enable)
+    {
+        wrapper_io::sendLastInExtra(enable);
+    }
+
     static SettingsErrors^ GetSettingsErrors(DriverSettings^ args)
     {
         auto errors = gcnew SettingsErrors();
