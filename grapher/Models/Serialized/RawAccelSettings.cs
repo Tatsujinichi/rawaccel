@@ -125,11 +125,13 @@ namespace grapher.Models.Serialized
             bool wholeOrNoY = accelSettings.combineMagnitudes ||
                 accelSettings.modes.y == AccelMode.noaccel;
 
-            return accelSettings.sensitivity.x == 1 &&
+            return string.IsNullOrEmpty(accelSettings.deviceID) &&
+                accelSettings.sensitivity.x == 1 &&
                 accelSettings.sensitivity.y == 1 &&
                 accelSettings.directionalMultipliers.x <= 0 &&
                 accelSettings.directionalMultipliers.y <= 0 &&
                 accelSettings.rotation == 0 &&
+                accelSettings.snap == 0 &&
                 accelSettings.modes.x == AccelMode.noaccel &&
                 wholeOrNoY;
         }

@@ -1,13 +1,17 @@
 #pragma once
 
+#include <algorithm>
 #include <type_traits>
+#include <msclr\marshal_cppstd.h>
 
 #include <rawaccel.hpp>
 #include <rawaccel-version.h>
+#include <utility-rawinput.hpp>
 
 #include "wrapper_io.hpp"
 
 using namespace System;
+using namespace System::Collections::Generic;
 using namespace System::Runtime::InteropServices;
 using namespace System::Reflection;
 
@@ -52,12 +56,23 @@ public value struct Vec2
 
 [JsonObject(ItemRequired = Required::Always)]
 [StructLayout(LayoutKind::Sequential)]
+public value struct DomainArgs
+{
+    Vec2<double> domainXY;
+    double lpNorm;
+};
+
+[JsonObject(ItemRequired = Required::Always)]
+[StructLayout(LayoutKind::Sequential, CharSet = CharSet::Unicode)]
 public ref struct DriverSettings
 {
     literal String^ Key = "Driver settings";
 
     [JsonProperty("Degrees of rotation")]
     double rotation;
+
+    [JsonProperty("Degrees of angle snapping", Required = Required::Default)]
+    double snap;
 
     [JsonProperty("Use x as whole/combined accel")]
     [MarshalAs(UnmanagedType::U1)]
@@ -75,12 +90,28 @@ public ref struct DriverSettings
     [JsonProperty("Negative directional multipliers", Required = Required::Default)]
     Vec2<double> directionalMultipliers;
 
+    [JsonProperty("Stretches domain for horizontal vs vertical inputs", Required = Required::Default)]
+    DomainArgs domainArgs;
+
+    [JsonProperty("Stretches accel range for horizontal vs vertical inputs", Required = Required::Default)]
+    Vec2<double> rangeXY;
+
     [JsonProperty(Required = Required::Default)]
     double minimumTime;
+
+    [JsonProperty("Device ID", Required = Required::Default)]
+    [MarshalAs(UnmanagedType::ByValTStr, SizeConst = MAX_DEV_ID_LEN)]
+    String^ deviceID = "";
 
     bool ShouldSerializeminimumTime() 
     { 
         return minimumTime > 0 && minimumTime != DEFAULT_TIME_MIN;
+    }
+
+    DriverSettings() 
+    {
+        domainArgs = { { 1, 1 }, 2 };
+        rangeXY = { 1, 1 };
     }
 };
 
@@ -176,16 +207,40 @@ error_list_t^ get_accel_errors(AccelMode mode, AccelArgs^ args)
     return error_list;
 }
 
+error_list_t^ get_other_errors(DriverSettings^ settings)
+{
+    auto error_list = gcnew error_list_t();
+
+    if (settings->rangeXY.x <= 0 || settings->rangeXY.y <= 0)
+    {
+        error_list->Add("range values must be positive");
+    }
+
+    if (settings->domainArgs.domainXY.x <= 0 || settings->domainArgs.domainXY.y <= 0)
+    {
+        error_list->Add("domain values must be positive");
+    }
+
+    if (settings->domainArgs.lpNorm <= 0)
+    {
+        error_list->Add("lp norm must be positive");
+    }
+    
+    return error_list;
+}
+
 public ref class SettingsErrors
 {
 public:
     error_list_t^ x;
     error_list_t^ y;
+    error_list_t^ other;
 
     bool Empty()
     {
         return (x == nullptr || x->Count == 0) && 
-            (y == nullptr || y->Count == 0);
+            (y == nullptr || y->Count == 0) &&
+            (other == nullptr || other->Count == 0);
     }
 
     virtual String^ ToString() override 
@@ -212,9 +267,79 @@ public:
                 sb->AppendFormat("y: {0}\n", str);
             }
         }
+
+        for each (String ^ str in other)
+        {
+			sb->AppendLine(str);
+        }
         
         return sb->ToString();
     }
+};
+
+struct device_info {
+    std::wstring name;
+    std::wstring id;
+};
+
+std::vector<device_info> get_unique_device_info() {
+    std::vector<device_info> info;
+
+    rawinput_foreach_with_interface([&](const auto& dev, const WCHAR* name) {
+        info.push_back({
+            L"", // get_property_wstr(name, &DEVPKEY_Device_FriendlyName), /* doesn't work */
+            dev_id_from_interface(name)
+        });
+    });
+
+    std::sort(info.begin(), info.end(),
+        [](auto&& l, auto&& r) { return l.id < r.id; });
+    auto last = std::unique(info.begin(), info.end(),
+        [](auto&& l, auto&& r) { return l.id == r.id; });
+    info.erase(last, info.end());
+
+    return info;
+}
+
+public ref struct RawInputInterop
+{
+    static void AddHandlesFromID(String^ deviceID, List<IntPtr>^ rawInputHandles)
+    {
+        try
+        {
+            std::vector<HANDLE> nativeHandles = rawinput_handles_from_dev_id(
+                msclr::interop::marshal_as<std::wstring>(deviceID));
+
+            for (auto nh : nativeHandles) rawInputHandles->Add(IntPtr(nh));
+        }
+        catch (const std::exception& e)
+        {
+            throw gcnew System::Exception(gcnew String(e.what()));
+        }
+    }
+
+    static List<ValueTuple<String^, String^>>^ GetDeviceIDs()
+    {
+        try
+        {
+            auto managed = gcnew List<ValueTuple<String^, String^>>();
+
+            for (auto&& [name, id] : get_unique_device_info())
+            {
+                managed->Add(
+                    ValueTuple<String^, String^>(
+                        msclr::interop::marshal_as<String^>(name),
+                        msclr::interop::marshal_as<String^>(id)));
+            }
+
+            return managed;
+        }
+        catch (const std::exception& e)
+        {
+            throw gcnew System::Exception(gcnew String(e.what()));
+        }
+    }
+
 };
 
 public ref struct DriverInterop
@@ -247,8 +372,12 @@ public ref struct DriverInterop
             errors->y = get_accel_errors(args->modes.y, args->args.y);
         }
 
+        errors->other = get_other_errors(args);
+
         return errors;
     }
+
+
 
     static error_list_t^ GetAccelErrors(AccelMode mode, AccelArgs^ args)
     {

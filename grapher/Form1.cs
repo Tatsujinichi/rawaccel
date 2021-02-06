@@ -64,16 +64,16 @@ namespace grapher
                 toggleButton,
                 showVelocityGainToolStripMenuItem,
                 showLastMouseMoveToolStripMenuItem,
-                wholeVectorToolStripMenuItem,
-                byVectorComponentToolStripMenuItem,
                 gainCapToolStripMenuItem,
                 legacyCapToolStripMenuItem,
                 gainOffsetToolStripMenuItem,
                 legacyOffsetToolStripMenuItem,
                 AutoWriteMenuItem,
+                UseSpecificDeviceMenuItem,
                 ScaleMenuItem,
                 DPITextBox,
                 PollRateTextBox,
+                DirectionalityPanel,
                 sensitivityBoxX,
                 sensitivityBoxY,
                 rotationBox,
@@ -93,8 +93,16 @@ namespace grapher
                 expBoxY,
                 midpointBoxX,
                 midpointBoxY,
+                DomainBoxX,
+                DomainBoxY,
+                RangeBoxX,
+                RangeBoxY,
+                LpNormBox,
                 sensXYLock,
                 ByComponentXYLock,
+                FakeBox,
+                WholeCheckBox,
+                ByComponentCheckBox,
                 LockXYLabel,
                 sensitivityLabel,
                 rotationLabel,
@@ -139,7 +147,21 @@ namespace grapher
                 AccelTypeActiveLabelY,
                 OptionSetXTitle,
                 OptionSetYTitle,
-                MouseLabel);
+                MouseLabel,
+                DirectionalityLabel,
+                DirectionalityX,
+                DirectionalityY,
+                DirectionalityActiveValueTitle,
+                LPNormLabel,
+                LpNormActiveValue,
+                DirectionalDomainLabel,
+                DomainActiveValueX,
+                DomainActiveValueY,
+                DirectionalityRangeLabel,
+                RangeActiveValueX,
+                RangeActiveValueY);
+
+            ResizeAndCenter();
         }
 
         #endregion Constructor
@@ -154,17 +176,16 @@ namespace grapher
 
         protected override void WndProc(ref Message m)
         {
-            if (m.Msg == 0x00ff)
+            if (m.Msg == 0x00ff) // WM_INPUT
             {
                 AccelGUI.MouseWatcher.ReadMouseMove(m);
             }
+            else if (m.Msg == 0x00fe) // WM_INPUT_DEVICE_CHANGE
+            {
+                AccelGUI.UpdateInputManagers();
+            }
 
             base.WndProc(ref m);
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
         }
 
         public void ResetAutoScroll()
@@ -172,30 +193,27 @@ namespace grapher
             chartsPanel.AutoScrollPosition = Constants.Origin;
         }
 
-        public void DoResize()
+        public void ResizeAndCenter()
         {
             ResetAutoScroll();
 
-            var workingArea = Screen.PrimaryScreen.WorkingArea;
+            var workingArea = Screen.FromControl(this).WorkingArea;
             var chartsPreferredSize = chartsPanel.GetPreferredSize(Constants.MaxSize);
 
             Size = new Size
             {
-                Width = Math.Min(workingArea.Width - Location.X, optionsPanel.Size.Width + chartsPreferredSize.Width),
-                Height = Math.Min(workingArea.Height - Location.Y, chartsPreferredSize.Height + 48)
+                Width = Math.Min(workingArea.Width, optionsPanel.Size.Width + chartsPreferredSize.Width),
+                Height = Math.Min(workingArea.Height, chartsPreferredSize.Height + 48)
             };
-        }
 
-        private void RawAcceleration_Paint(object sender, PaintEventArgs e)
-        {
-            //AccelGUI.AccelCharts.DrawLastMovement();
+            Location = new Point
+            {
+                X = workingArea.X + (workingArea.Width - Size.Width) / 2,
+                Y = workingArea.Y + (workingArea.Height - Size.Height) / 2
+            };
+
         }
 
         #endregion Method
-
-        private void optionsPanel_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using grapher.Models.Calculations;
+using grapher.Models.Devices;
 using grapher.Models.Mouse;
 using grapher.Models.Options;
 using grapher.Models.Serialized;
@@ -23,7 +24,8 @@ namespace grapher
             Button writeButton,
             ButtonBase toggleButton,
             MouseWatcher mouseWatcher,
-            ToolStripMenuItem scaleMenuItem)
+            ToolStripMenuItem scaleMenuItem,
+            DeviceIDManager deviceIDManager)
         {
             AccelForm = accelForm;
             AccelCalculator = accelCalculator;
@@ -36,6 +38,7 @@ namespace grapher
             DefaultButtonFont = WriteButton.Font;
             SmallButtonFont = new Font(WriteButton.Font.Name, WriteButton.Font.Size * Constants.SmallButtonSizeFactor);
             MouseWatcher = mouseWatcher;
+            DeviceIDManager = deviceIDManager;
 
             ScaleMenuItem.Click += new System.EventHandler(OnScaleMenuItemClick);
             WriteButton.Click += new System.EventHandler(OnWriteButtonClick);
@@ -68,7 +71,11 @@ namespace grapher
             }
 
             SetupButtons();
-            AccelForm.DoResize();
+
+            // TODO: The below removes an overlapping form from the anisotropy panel.
+            // Figure out why and remove the overlap and below.
+            ApplyOptions.Directionality.Show();
+            ApplyOptions.Directionality.Hide();
         }
 
         #endregion Constructors
@@ -94,6 +101,10 @@ namespace grapher
         public MouseWatcher MouseWatcher { get; }
 
         public ToolStripMenuItem ScaleMenuItem { get; }
+
+        public DeviceIDManager DeviceIDManager { get; }
+
+        public Action UpdateInputManagers { get; private set; }
 
         private Timer ChartRefresh { get; }
 
@@ -132,6 +143,7 @@ namespace grapher
             var settings = new DriverSettings
             {
                 rotation = ApplyOptions.Rotation.Field.Data,
+                snap = driverSettings.snap,
                 sensitivity = new Vec2<double>
                 {
                     x = ApplyOptions.Sensitivity.Fields.X,
@@ -141,7 +153,10 @@ namespace grapher
                 modes = ApplyOptions.GetModes(),
                 args = newArgs,
                 minimumTime = driverSettings.minimumTime,
-                directionalMultipliers = driverSettings.directionalMultipliers
+                directionalMultipliers = driverSettings.directionalMultipliers,
+                domainArgs = ApplyOptions.Directionality.GetDomainArgs(),
+                rangeXY = ApplyOptions.Directionality.GetRangeXY(),
+                deviceID = DeviceIDManager.ID,
             };
 
             ButtonDelay(WriteButton);
@@ -154,7 +169,7 @@ namespace grapher
             }
             else
             {
-                throw new Exception($"Bad arguments:\n\n{errors}");
+                new MessageDialog(errors.ToString(), "bad input").ShowDialog();
             }
         }
 
@@ -162,6 +177,14 @@ namespace grapher
         {
             UpdateShownActiveValues(args);
             UpdateGraph(args);
+
+            UpdateInputManagers = () =>
+            {
+                MouseWatcher.UpdateHandles(args.deviceID);
+                DeviceIDManager.Update(args.deviceID);
+            };
+
+            UpdateInputManagers();
         }
 
         public void UpdateGraph(DriverSettings args)
@@ -190,7 +213,7 @@ namespace grapher
 
         private void SetupButtons()
         {
-            WriteButton.Top = AccelCharts.Top + AccelCharts.TopChartHeight - Constants.ButtonVerticalOffset;
+            WriteButton.Top = Constants.SensitivityChartAloneHeight - Constants.ButtonVerticalOffset;
             
             ToggleButton.Appearance = Appearance.Button;
             ToggleButton.FlatStyle = FlatStyle.System;
@@ -206,7 +229,7 @@ namespace grapher
             ToggleButton.Checked = LastToggleChecked;
 
             ToggleButton.Font = DefaultButtonFont;
-            ToggleButton.Text = ToggleButton.Checked ? "Enabled" : "Disabled";
+            ToggleButton.Text = ToggleButton.Checked ? "Disable" : "Enable";
             ToggleButton.Update();
 
             WriteButton.Font = DefaultButtonFont;
